@@ -1,0 +1,20 @@
+{
+    "license": "private",
+    "authors": [
+        {
+            "name": "Sebastian Stuckenbrock",
+            "email": "sstuckenbrock@efhm.de"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.4",
+        "slim/slim": "2.4.*",
+        "slim/extras": "2.0.*",
+        "slim/views":"0.1.*",
+        "gabordemooij/redbean": "dev-master",
+        "raveren/kint": "dev-master"
+    },
+    "config": {
+        "preferred-install": "dist"
+    }
+}
