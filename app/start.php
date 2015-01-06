@@ -29,6 +29,10 @@ foreach(glob(ROOT.'/app/hooks/*.php') as $hook) {
   include $hook;
 }
 
+foreach(glob(ROOT.'/app/middlewares/*.php') as $middlewares) {
+  include $middlewares;
+}
+
 foreach(glob(ROOT.'/app/controllers/*.php') as $router) {
   include $router;
 }
