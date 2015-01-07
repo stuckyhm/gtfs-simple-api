@@ -27,12 +27,36 @@ $app->group('/stops', function () use ($app) {
     $stmt->execute($sql_param);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    for($i=0; $i<sizeof($data); $i++){
+      $data[$i]['stop_latlon'] = array($data[$i]['stop_lat'], $data[$i]['stop_lon']);
+      unset($data[$i]['stop_lat']);
+      unset($data[$i]['stop_lon']);
+
+      if(in_array('full', $detail) || in_array('routes', $detail) || in_array('routes_full', $detail)){
+        if(in_array('routes_full', $detail) || in_array('full', $detail)){
+          $sqlRouteColumns = "r.*";
+        }else{
+          $sqlRouteColumns = "r.route_id, r.agency_id, r.route_short_name, r.route_long_name, r.route_color, r.route_text_color";
+        }
+        $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlRouteColumns.
+                              " FROM stops AS s ".
+                              " LEFT JOIN xtra_stop_routes AS sr ON s.stop_id = sr.stop_id ".
+                              " LEFT JOIN routes AS r ON r.route_id = sr.route_id ".
+                              " WHERE (s.stop_id = :stop_id OR s.parent_station = :stop_id) ".
+                              "  AND r.route_id IS NOT NULL");
+        $stmt->execute(array('stop_id' => $data[$i]['stop_id']));
+        $data[$i]['routes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+      }
+    }
+
     $app->response->headers->set('Content-Type', 'application/json');
     $app->response->body(json_encode($data));
   })->name('get_stops')->conditions(array('format' => '(json)'));
 
 
   $app->get('/:stopId(\.:format)', function ($stopId, $format = 'json') use ($app){
+    $detail = explode(',', $app->request()->get('detail'));
+
     $pdo = R::getDatabaseAdapter()->getDatabase()->getPDO();
     $stmt = $pdo->prepare("SELECT * FROM stops WHERE stop_id = ?");
     $stmt->execute([$stopId]);
@@ -43,9 +67,29 @@ $app->group('/stops', function () use ($app) {
     if(!isset($data['stop_id'])){
       $app->pass();
     }
+
+    $data['stop_latlon'] = array($data['stop_lat'], $data['stop_lon']);
+    unset($data['stop_lat']);
+    unset($data['stop_lon']);
+
+    if(in_array('routes', $detail) || in_array('full', $detail)){
+      if(in_array('full', $detail)){
+        $sqlRouteColumns = "r.*";
+      }else{
+        $sqlRouteColumns = "r.route_id, r.agency_id, r.route_short_name, r.route_long_name, r.route_color, r.route_text_color";
+      }
+      $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlRouteColumns.
+                            " FROM stops AS s ".
+                            " LEFT JOIN xtra_stop_routes AS sr ON s.stop_id = sr.stop_id ".
+                            " LEFT JOIN routes AS r ON r.route_id = sr.route_id ".
+                            " WHERE (s.stop_id = :stop_id OR s.parent_station = :stop_id) ".
+                            "  AND r.route_id IS NOT NULL");
+      $stmt->execute(array('stop_id' => $data['stop_id']));
+      $data['routes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
     
     $app->response->headers->set('Content-Type', 'application/json');
     $app->response->body(json_encode($data));
-  })->name('get_stop')->conditions(array('format' => '(json)'));
+  })->name('get_stop')->conditions(array('stopId' => '[0-9A-Za-z_-]*', 'format' => '(json)'));
 
 });
