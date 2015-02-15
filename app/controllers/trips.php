@@ -3,8 +3,11 @@
 $app->group('/trips', function () use ($app) {
 
   $app->get('(/)(\.:format)', function ($format = 'json') use ($app){
+    $limit = $app->request()->get('limit');
+    $limitString = (is_numeric($limit) ? ' LIMIT ' .((int)$limit) : '');
+
     $pdo = R::getDatabaseAdapter()->getDatabase()->getPDO();
-    $stmt = $pdo->prepare("SELECT * FROM trips");
+    $stmt = $pdo->prepare("SELECT * FROM trips".$limitString);
     $stmt->execute();
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -58,7 +61,7 @@ $app->group('/trips', function () use ($app) {
   $app->get('/:tripId(/:operatingDate)/next_stops(\.:format)', function ($tripId, $operatingDate = false, $format = 'json') use ($app){
     $detail = explode(',', $app->request()->get('detail'));
     $limit = $app->request()->get('limit');
-    $limit = (is_numeric($limit) ? ($limit <= 20 ? $limit : 20) : 10);
+    $limitString = (is_numeric($limit) ? ' LIMIT ' .((int)$limit) : '');
 
     if($operatingDate == false){
       $operatingDate = date('Y-m-d');
@@ -73,7 +76,7 @@ $app->group('/trips', function () use ($app) {
                           "  AND tst.operating_date = :operating_date ".
                           "  AND tst.arrival_utc >= now() ".
                           " ORDER BY tst.arrival_utc ASC ".
-                          " LIMIT 4");
+                          $limitString);
     $stmt->execute(array('trip_id' => $tripId, 'operating_date' => $operatingDate));
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
