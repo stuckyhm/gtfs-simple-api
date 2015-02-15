@@ -92,4 +92,41 @@ $app->group('/stops', function () use ($app) {
     $app->response->body(json_encode($data));
   })->name('get_stop')->conditions(array('stopId' => '[0-9A-Za-z_-]*', 'format' => '(json)'));
 
+
+  $app->get('/:stopId/next_trips(\.:format)', function ($stopId, $format = 'json') use ($app){
+    $detail = explode(',', $app->request()->get('detail'));
+    $limit = $app->request()->get('limit');
+    $limit = (is_numeric($limit) ? ($limit <= 20 ? $limit : 20) : 10);
+
+    $sql_columns = 't.trip_id, xtst.operating_date, xtst.arrival_utc, xtst.departure_utc, xtst.timezone, t.trip_headsign, t.trip_short_name, r.route_id, r.route_type, 
+                    r.route_short_name, r.route_long_name, r.route_color, r.route_text_color';
+
+    if(in_array('full', $detail)){
+      $sql_columns .= ', t.direction_id, t.block_id, t.shape_id, t.wheelchair_accessible, t.bikes_allowed, r.agency_id, r.route_desc, r.route_url';
+    }
+
+    $pdo = R::getDatabaseAdapter()->getDatabase()->getPDO();
+    $stmt = $pdo->prepare("SELECT ".$sql_columns."
+                           FROM xtra_trip_stop_times AS xtst
+                           LEFT JOIN trips AS t ON t.trip_id = xtst.trip_id
+                           LEFT JOIN routes AS r ON r.route_id = t.route_id
+                           WHERE xtst.stop_id IN
+                               (SELECT stop_id
+                                FROM stops
+                                WHERE stop_id = ?
+                                  OR parent_station = ?)
+                             AND xtst.departure_utc >= now()
+                           ORDER BY xtst.departure_utc ASC
+                           LIMIT ".((int)$limit).";");
+    $stmt->execute([$stopId, $stopId]);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    /*if(!isset($data['stop_id'])){
+      $app->pass();
+    }*/
+
+    $app->response->headers->set('Content-Type', 'application/json');
+    $app->response->body(json_encode($data));
+  })->name('get_stop_next_trips')->conditions(array('stopId' => '[0-9A-Za-z_-]*', 'format' => '(json)'));
+
 });
