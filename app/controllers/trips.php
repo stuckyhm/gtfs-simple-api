@@ -68,7 +68,12 @@ $app->group('/trips', function () use ($app) {
     }
 
     $pdo = R::getDatabaseAdapter()->getDatabase()->getPDO();
-    $sqlColumns = "tst.stop_id, tst.stop_sequence, s.stop_name, s.stop_code, tst.arrival_utc, tst.departure_utc, tst.timezone, s.stop_desc, s.zone_id, s.stop_url, s.wheelchair_boarding";
+
+    $sqlColumns = "tst.stop_id, tst.stop_sequence, s.stop_name, s.stop_code, tst.arrival_utc, tst.departure_utc, tst.timezone, s.wheelchair_boarding";
+    if(in_array('full', $detail)){
+      $sqlColumns .= ", s.stop_desc, s.zone_id, s.stop_url";
+    }
+
     $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlColumns.
                           " FROM xtra_trip_stop_times AS tst ".
                           " LEFT JOIN stops AS s ON s.stop_id = tst.stop_id ".
