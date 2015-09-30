@@ -100,7 +100,7 @@ $app->group('/stops', function () use ($app) {
     $limit = $app->request()->get('limit');
     $limitString = ' LIMIT '.(is_numeric($limit) ? ($limit <= 50 ? ((int)$limit) : 50) : 10);
 
-    $sql_columns = 't.trip_id, xtst.operating_date, xtst.arrival_utc, xtst.departure_utc, xtst.timezone, t.trip_headsign, t.trip_short_name, r.route_id, r.route_type, 
+    $sql_columns = 't.trip_id, xtst.service_date, xtst.arrival_utc, xtst.departure_utc, xtst.timezone, t.trip_headsign, t.trip_short_name, r.route_id, r.route_type, 
                     r.route_short_name, r.route_long_name, r.route_color, r.route_text_color';
 
     if(in_array('full', $detail)){
