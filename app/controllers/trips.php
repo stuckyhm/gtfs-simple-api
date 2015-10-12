@@ -24,10 +24,14 @@ $app->group('/trips', function () use ($app) {
     }
 
     $pdo = R::getDatabaseAdapter()->getDatabase()->getPDO();
-    $stmt = $pdo->prepare("SELECT t.*, r.route_color, r.route_text_color, r.route_short_name, r.route_long_name".
-                          " FROM trips AS t".
-                          " LEFT JOIN routes AS r ON r.route_id = t.route_id".
-                          " WHERE t.trip_id = ?");
+    $stmt = $pdo->prepare("SELECT t.*,
+                                  r.route_color,
+                                  r.route_text_color,
+                                  r.route_short_name,
+                                  r.route_long_name
+                            FROM trips AS t
+                            LEFT JOIN routes AS r ON r.route_id = t.route_id
+                            WHERE t.trip_id = ?");
     $stmt->execute([$tripId]);
     $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -42,18 +46,28 @@ $app->group('/trips', function () use ($app) {
     }
 
     if(in_array('stops', $detail) || in_array('stops_full', $detail) || in_array('full', $detail)){
-      $sqlColumns = "tst.stop_id, tst.stop_sequence, s.stop_name, s.stop_code, tst.arrival_utc, tst.departure_utc, tst.timezone, s.wheelchair_boarding";
+      $sqlColumns = "tst.stop_id,
+                     tst.stop_sequence,
+                     s.stop_name,
+                     s.stop_code,
+                     DATE_FORMAT(tst.arrival_utc, '%Y-%m-%dT%H:%i:%sZ') as arrival_utc,
+                     DATE_FORMAT(tst.departure_utc, '%Y-%m-%dT%H:%i:%sZ') as departure_utc,
+                     tst.timezone,
+                     s.wheelchair_boarding";
 
       if(in_array('full', $detail) || in_array('stops_full', $detail)){
-        $sqlColumns .= ", s.stop_desc, s.zone_id, s.stop_url";
+        $sqlColumns .= ", 
+                        s.stop_desc,
+                        s.zone_id,
+                        s.stop_url";
       }
 
-      $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlColumns.
-                            " FROM xtra_trip_stop_times AS tst ".
-                            " LEFT JOIN stops AS s ON s.stop_id = tst.stop_id ".
-                            " WHERE tst.trip_id = :trip_id ".
-                            "  AND tst.service_date = :service_date ".
-                            " ORDER BY tst.arrival_utc ASC ");
+      $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlColumns."
+                              FROM xtra_trip_stop_times AS tst
+                              LEFT JOIN stops AS s ON s.stop_id = tst.stop_id 
+                              WHERE tst.trip_id = :trip_id
+                               AND tst.service_date = :service_date 
+                              ORDER BY DATE_FORMAT(tst.arrival_utc, '%Y-%m-%dT%H:%i:%sZ') ASC ");
       $stmt->execute(array('trip_id' => $data['trip_id'], 'service_date' => $serviceDate));
       $data['stops'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -74,19 +88,29 @@ $app->group('/trips', function () use ($app) {
 
     $pdo = R::getDatabaseAdapter()->getDatabase()->getPDO();
 
-    $sqlColumns = "tst.stop_id, tst.stop_sequence, s.stop_name, s.stop_code, tst.arrival_utc, tst.departure_utc, tst.timezone, s.wheelchair_boarding";
+    $sqlColumns = "tst.stop_id,
+                   tst.stop_sequence,
+                   s.stop_name,
+                   s.stop_code, 
+                   DATE_FORMAT(tst.arrival_utc, '%Y-%m-%dT%H:%i:%sZ') as arrival_utc,
+                   DATE_FORMAT(tst.departure_utc, '%Y-%m-%dT%H:%i:%sZ') as departure_utc,
+                   tst.timezone,
+                   s.wheelchair_boarding";
     if(in_array('full', $detail)){
-      $sqlColumns .= ", s.stop_desc, s.zone_id, s.stop_url";
+      $sqlColumns .= ",
+                       s.stop_desc,
+                       s.zone_id,
+                       s.stop_url";
     }
 
-    $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlColumns.
-                          " FROM xtra_trip_stop_times AS tst ".
-                          " LEFT JOIN stops AS s ON s.stop_id = tst.stop_id ".
-                          " WHERE tst.trip_id = :trip_id ".
-                          "  AND tst.service_date = :service_date ".
-                          "  AND tst.arrival_utc >= now() ".
-                          " ORDER BY tst.arrival_utc ASC ".
-                          $limitString);
+    $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlColumns."
+                            FROM xtra_trip_stop_times AS tst
+                            LEFT JOIN stops AS s ON s.stop_id = tst.stop_id
+                            WHERE tst.trip_id = :trip_id
+                             AND tst.service_date = :service_date
+                             AND tst.arrival_utc >= UTC_TIMESTAMP()
+                            ORDER BY tst.arrival_utc ASC 
+                          ".$limitString);
     $stmt->execute(array('trip_id' => $tripId, 'service_date' => $serviceDate));
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

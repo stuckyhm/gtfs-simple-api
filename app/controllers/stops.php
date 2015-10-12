@@ -78,7 +78,12 @@ $app->group('/stops', function () use ($app) {
       if(in_array('full', $detail)){
         $sqlRouteColumns = "r.*";
       }else{
-        $sqlRouteColumns = "r.route_id, r.agency_id, r.route_short_name, r.route_long_name, r.route_color, r.route_text_color";
+        $sqlRouteColumns = "r.route_id,
+                            r.agency_id,
+                            r.route_short_name,
+                            r.route_long_name,
+                            r.route_color,
+                            r.route_text_color";
       }
       $stmt = $pdo->prepare("SELECT DISTINCT ".$sqlRouteColumns.
                             " FROM stops AS s ".
@@ -100,8 +105,19 @@ $app->group('/stops', function () use ($app) {
     $limit = $app->request()->get('limit');
     $limitString = ' LIMIT '.(is_numeric($limit) ? ($limit <= 50 ? ((int)$limit) : 50) : 10);
 
-    $sql_columns = 't.trip_id, xtst.service_date, xtst.arrival_utc, xtst.departure_utc, xtst.timezone, t.trip_headsign, t.trip_short_name, r.route_id, r.route_type, 
-                    r.route_short_name, r.route_long_name, r.route_color, r.route_text_color';
+    $sql_columns = "t.trip_id,
+                    xtst.service_date,
+                    xtst.timezone, 
+                    DATE_FORMAT(xtst.arrival_utc, '%Y-%m-%dT%H:%i:%sZ') as arrival_utc,
+                    DATE_FORMAT(xtst.departure_utc, '%Y-%m-%dT%H:%i:%sZ') as departure_utc, 
+                    t.trip_headsign,
+                    t.trip_short_name,
+                    r.route_id,
+                    r.route_type,
+                    r.route_short_name,
+                    r.route_long_name,
+                    r.route_color,
+                    r.route_text_color";
 
     if(in_array('full', $detail)){
       $sql_columns .= ', t.direction_id, t.block_id, t.shape_id, t.wheelchair_accessible, t.bikes_allowed, r.agency_id, r.route_desc, r.route_url';
@@ -117,7 +133,7 @@ $app->group('/stops', function () use ($app) {
                                 FROM stops
                                 WHERE stop_id = ?
                                   OR parent_station = ?)
-                             AND xtst.departure_utc >= now()
+                             AND xtst.departure_utc >= UTC_TIMESTAMP()
                            ORDER BY xtst.departure_utc ASC
                            ".$limitString);
     $stmt->execute([$stopId, $stopId]);
